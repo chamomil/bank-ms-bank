@@ -1,0 +1,299 @@
+openapi: 3.0.3
+info:
+  title: Sample API
+  description: API description in Markdown.
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:8081/'
+paths:
+  /v1/me/accounts:
+    get:
+      summary: Просмотр счетов пользователя
+      tags:
+        - User data
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountsResponse'
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/accounts:
+    post:
+      summary: Открытие счёта
+      tags:
+        - Account operations
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/accounts/{accountId}/block:
+    post:
+      summary: Блокировка счёта
+      tags:
+        - Account operations
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: accountId
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/accounts/{accountId}/history:
+    get:
+      summary: История транзакций счёта
+      tags:
+        - Account operations
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: accountId
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    $ref: '#/components/schemas/AccountHistoryResponse'
+                  total:
+                    type: integer
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/transactions:
+    post:
+      summary: Перевод на счёт
+      tags:
+        - Transactions
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                senderId:
+                  type: integer
+                  description: Номер счёта отправителя
+                receiverId:
+                  type: integer
+                  description: Номер счёта получателя
+                amountCents:
+                  type: integer
+                  description: Сумма перевода (в центах)
+                description:
+                  type: string
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/atm/supplement:
+    post:
+      summary: Внесение наличных в банкомат инкассатором
+      tags:
+        - ATM collector operations
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amountCents:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/atm/withdrawal:
+    post:
+      summary: Изъятие инкассатором наличных из банкомата
+      tags:
+        - ATM collector operations
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amountCents:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/atm/user/supplement:
+    post:
+      summary: Пополнение счёта
+      tags:
+        - ATM User operations
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amountCents:
+                  type: integer
+                accountId:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/atm/user/withdrawal:
+    post:
+      summary: Снятие денег со счёта
+      tags:
+        - ATM User operations
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amountCents:
+                  type: integer
+                accountId:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        internalCode:
+          type: string
+          description: Внутренний код ошибки
+        devMessage:
+          type: string
+          description: Сообщение для разработчика
+        userMessage:
+          type: string
+          description: Сообщение для пользователя
+
+    AccountsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+          balanceCents:
+            type: integer
+          status:
+            type: string
+        required:
+          - id
+          - balanceCents
+          - status
+
+    AccountHistoryResponse:
+      type: array
+      nullable: true
+      items:
+        type: object
+        properties:
+          senderId:
+            type: integer
+          receiverId:
+            type: integer
+          status:
+            type: string
+          createdAt:
+            type: string
+          amountCents:
+            type: integer
+          description:
+            type: string
+        required:
+          - senderId
+          - receiverId
+          - status
+          - createdAt
+          - amountCents
+          - description
