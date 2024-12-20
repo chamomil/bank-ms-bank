@@ -157,7 +157,7 @@ func (t *Transport) handlerAccountTransaction(w http.ResponseWriter, r *http.Req
 	}
 	userId := claims.Sub
 
-	if err := t.service.MakeTransaction(r.Context(), transactionData.SenderId, transactionData.ReceiverId, transactionData.AmountCents, userId, transactionData.Description); err != nil {
+	if _, err := t.service.MakeTransaction(r.Context(), transactionData.SenderId, transactionData.ReceiverId, transactionData.AmountCents, userId, transactionData.Description); err != nil {
 		t.errorHandler.setError(w, err)
 		return
 	}
