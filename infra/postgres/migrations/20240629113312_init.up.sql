@@ -13,7 +13,7 @@ CREATE TABLE "accountOwners"
 (
     "id"     BIGSERIAL PRIMARY KEY,
     "userId" BIGINT UNIQUE,
-    "atmId"  BIGINT UNIQUE REFERENCES "atms" ("id"),
+    "atmId"  BIGINT UNIQUE REFERENCES "atms" ("id") ON DELETE CASCADE,
     CHECK (("userId" IS NULL AND "atmId" IS NOT NULL)
         OR ("userId" IS NOT NULL AND "atmId" IS NULL))
 );
@@ -22,7 +22,7 @@ CREATE TABLE "accounts"
 (
     "id"           BIGSERIAL PRIMARY KEY,
     "balanceCents" BIGINT         NOT NULL CHECK ( "balanceCents" >= 0 ) DEFAULT 0,
-    "ownerId"      BIGINT         NOT NULL REFERENCES "accountOwners" ("id"),
+    "ownerId"      BIGINT         NOT NULL REFERENCES "accountOwners" ("id") ON DELETE CASCADE,
     "status"       status_account NOT NULL                               DEFAULT 'ACTIVE'
 );
 
@@ -39,11 +39,11 @@ CREATE TABLE "transactions"
 
 CREATE TABLE "cashOperations"
 (
-    "id"          BIGSERIAL NOT NULL PRIMARY KEY,
-    "atmAccountId"       BIGINT NOT NULL REFERENCES "atms" ("id"),
-    "userAccountId"      BIGINT,
-    "amountCents" BIGINT NOT NULL CHECK ( "amountCents" != 0 ),
-    "createdAt"   TIMESTAMP          NOT NULL DEFAULT current_timestamp
+    "id"            BIGSERIAL NOT NULL PRIMARY KEY,
+    "atmAccountId"  BIGINT    NOT NULL REFERENCES "atms" ("id"),
+    "userAccountId" BIGINT,
+    "amountCents"   BIGINT    NOT NULL CHECK ( "amountCents" != 0 ),
+    "createdAt"     TIMESTAMP NOT NULL DEFAULT current_timestamp
 );
 
 CREATE INDEX "transactions_senderId_index" ON "transactions" ("senderId");

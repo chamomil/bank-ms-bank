@@ -29,9 +29,11 @@ func (t *Transport) routes() http.Handler {
 	mux.HandleFunc("GET /v1/me/accounts", userMiddlewareGroup.Apply(t.handlerUserAccounts))
 
 	mux.HandleFunc("POST /v1/accounts", userMiddlewareGroup.Apply(t.handlerOpenAccount))
-	mux.HandleFunc("POST /v1/accounts/{accountId}/block", userMiddlewareGroup.Apply(t.handlerBlockAccount))
+	mux.HandleFunc("PATCH /v1/accounts/{accountId}", userMiddlewareGroup.Apply(t.handlerBlockAccount))
 	mux.HandleFunc("GET /v1/accounts/{accountId}/history", userMiddlewareGroup.Apply(t.handlerAccountHistory))
 
+	//TODO: add route to patch transaction status
+	//TODO: make user withdrawal immediate
 	mux.HandleFunc("POST /v1/transactions", userMiddlewareGroup.Apply(t.handlerAccountTransaction))
 	mux.HandleFunc("POST /v1/atm/supplement", ATMMiddlewareGroup.Apply(t.handlerATMSupplement))
 	mux.HandleFunc("POST /v1/atm/withdrawal", ATMMiddlewareGroup.Apply(t.handlerATMWithdrawal))

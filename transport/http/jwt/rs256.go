@@ -33,22 +33,17 @@ func NewRS256(pathPrivateKey, pathPublicKey string) (RS256, error) {
 		}
 
 		block, _ := pem.Decode(data)
-		if block == nil || block.Type != "PRIVATE KEY" {
+		if block == nil || block.Type != "RSA PRIVATE KEY" {
 			return nil, errors.New("Ошибка парсинга ключа")
 
 		}
 
-		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, err
 		}
 
-		rsaPrivateKey, ok := key.(*rsa.PrivateKey)
-		if !ok {
-			return nil, errors.New("Ошибка преобразования в rsa.PrivateKey")
-		}
-
-		return rsaPrivateKey, nil
+		return key, nil
 	}(pathPrivateKey)
 
 	if err != nil {

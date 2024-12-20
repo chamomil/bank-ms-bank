@@ -8,8 +8,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"time"
+	"x-bank-ms-bank/cerrors"
 	transaction_manager "x-bank-ms-bank/core/transaction-manager"
 	"x-bank-ms-bank/core/web"
+	"x-bank-ms-bank/ercodes"
 )
 
 type (
@@ -36,11 +38,19 @@ func NewService(login, password, host string, port int, database string, maxCons
 }
 
 func (s *Service) GetUserAccounts(ctx context.Context, userId int64) ([]web.UserAccountData, error) {
-	const query = `SELECT accounts."id", "balanceCents", "status" FROM accounts LEFT JOIN "accountOwners" ON "ownerId" = "accountOwners".id WHERE "userId" = $1`
+	const query = `
+SELECT accounts."id", "balanceCents", "status" 
+FROM accounts 
+    LEFT JOIN "accountOwners" ON "ownerId" = "accountOwners".id 
+WHERE "userId" = $1
+`
 
 	rows, err := s.db.QueryContext(ctx, query, userId)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, s.wrapQueryError(err)
 	}
 
@@ -159,6 +169,10 @@ func (s *Service) GetAccountDataById(ctx context.Context, senderId int64) (web.U
 
 	var userAccountData web.UserAccountData
 	if err := row.Scan(&userAccountData.BalanceCents, &userAccountData.Status, &userAccountData.UserId); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return web.UserAccountData{}, cerrors.NewErrorWithUserMessage(ercodes.AccountDoesntExist, err,
+				"Счёта, указанного в транзакции, не существует")
+		}
 		return web.UserAccountData{}, s.wrapScanError(err)
 	}
 	return userAccountData, nil

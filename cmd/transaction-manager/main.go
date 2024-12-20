@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 	"x-bank-ms-bank/config"
-	transaction_manager "x-bank-ms-bank/core/transaction-manager"
+	transactionmanager "x-bank-ms-bank/core/transaction-manager"
 	"x-bank-ms-bank/infra/postgres"
 )
 
@@ -23,7 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	service := transaction_manager.NewService(&postgresService)
+	service := transactionmanager.NewService(&postgresService)
 	if err = service.ApplyTransactions(context.Background()); err != nil {
 		log.Fatal(err)
 	}
