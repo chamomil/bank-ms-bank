@@ -25,6 +25,8 @@ func NewService(accountStorage AccountStorage, passwordHasher PasswordHasher, at
 	}
 }
 
+var transactionStatus = [3]string{"BLOCKED", "CONFIRMED", "CANCELLED"}
+
 func (s *Service) GetAccounts(ctx context.Context, userId int64) ([]entity.UserAccountData, error) {
 	return s.accountStorage.GetUserAccounts(ctx, userId)
 }
@@ -139,4 +141,20 @@ func (s *Service) changeATMState(ctx context.Context, login, password string, am
 		return 0, err
 	}
 	return atmData.AccountId, nil
+}
+
+func (s *Service) ChangeStatus(ctx context.Context, transactionId int64, status string) error {
+	if !s.isStatusValid(status) {
+		return cerrors.NewErrorWithUserMessage(ercodes.InvalidStatus, nil, "Неверный статус транзакции")
+	}
+	return s.transactionStorage.ChangeStatusById(ctx, transactionId, status)
+}
+
+func (s *Service) isStatusValid(status string) bool {
+	for i := range transactionStatus {
+		if status == transactionStatus[i] {
+			return true
+		}
+	}
+	return false
 }

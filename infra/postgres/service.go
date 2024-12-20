@@ -372,3 +372,9 @@ func (s *Service) applyTransaction(ctx context.Context, transaction entity.Trans
 	}
 	return nil
 }
+
+func (s *Service) ChangeStatusById(ctx context.Context, transactionId int64, status string) error {
+	const query = `UPDATE transactions SET status = $1 WHERE id = $2`
+	_, err := s.db.ExecContext(ctx, query, status, transactionId)
+	return err
+}
