@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"x-bank-ms-bank/cerrors"
+	"x-bank-ms-bank/entity"
 	"x-bank-ms-bank/ercodes"
 )
 
@@ -24,7 +25,7 @@ func NewService(accountStorage AccountStorage, passwordHasher PasswordHasher, at
 	}
 }
 
-func (s *Service) GetAccounts(ctx context.Context, userId int64) ([]UserAccountData, error) {
+func (s *Service) GetAccounts(ctx context.Context, userId int64) ([]entity.UserAccountData, error) {
 	return s.accountStorage.GetUserAccounts(ctx, userId)
 }
 
@@ -43,13 +44,13 @@ func (s *Service) BlockAccount(ctx context.Context, accountId, userId int64) err
 	return s.accountStorage.BlockUserAccount(ctx, accountId)
 }
 
-func (s *Service) GetAccountHistory(ctx context.Context, accountId, userId, limit, offset int64) ([]AccountTransactionsData, int64, error) {
+func (s *Service) GetAccountHistory(ctx context.Context, accountId, userId, limit, offset int64) ([]entity.AccountTransactionsData, int64, error) {
 	accountInfo, err := s.accountStorage.GetAccountDataById(ctx, accountId)
 	if err != nil {
-		return []AccountTransactionsData{}, 0, err
+		return []entity.AccountTransactionsData{}, 0, err
 	}
 	if accountInfo.UserId != userId {
-		return []AccountTransactionsData{}, 0, cerrors.NewErrorWithUserMessage(ercodes.AccessDenied, nil, "Ошибка доступа")
+		return []entity.AccountTransactionsData{}, 0, cerrors.NewErrorWithUserMessage(ercodes.AccessDenied, nil, "Ошибка доступа")
 	}
 
 	return s.accountStorage.GetAccountHistory(ctx, accountId, limit, offset)

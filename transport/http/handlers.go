@@ -12,7 +12,6 @@ const (
 	maxLimit      = 100
 	minLimit      = 0
 	defaultLimit  = 20
-	minOffset     = 0
 	defaultOffset = 0
 )
 

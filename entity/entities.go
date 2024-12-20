@@ -1,4 +1,4 @@
-package web
+package entity
 
 import "time"
 
@@ -24,5 +24,12 @@ type (
 		AccountId    int64
 		PasswordHash []byte
 		CashCents    int64
+	}
+
+	TransactionToApply struct {
+		Id          int64
+		SenderId    int64
+		ReceiverId  int64
+		AmountCents int64
 	}
 )

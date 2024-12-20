@@ -43,7 +43,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
   /v1/accounts/{accountId}/block:
-    post:
+    patch:
       summary: Блокировка счёта
       tags:
         - Account operations
