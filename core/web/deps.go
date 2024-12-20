@@ -13,7 +13,8 @@ type (
 	}
 
 	TransactionStorage interface {
-		CreateTransaction(ctx context.Context, senderId, receiverId, amountCents int64, description string) error
+		CreateTransaction(ctx context.Context, senderId, receiverId, amountCents int64, description string) (int64, error)
+		ConfirmTransactionById(ctx context.Context, transactionId int64) error
 	}
 
 	AtmStorage interface {

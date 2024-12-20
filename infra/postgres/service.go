@@ -178,10 +178,10 @@ func (s *Service) GetAccountDataById(ctx context.Context, senderId int64) (web.U
 	return userAccountData, nil
 }
 
-func (s *Service) CreateTransaction(ctx context.Context, senderId, receiverId, amountCents int64, description string) error {
+func (s *Service) CreateTransaction(ctx context.Context, senderId, receiverId, amountCents int64, description string) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return s.wrapQueryError(err)
+		return 0, s.wrapQueryError(err)
 	}
 
 	defer func() {
@@ -191,15 +191,20 @@ func (s *Service) CreateTransaction(ctx context.Context, senderId, receiverId, a
 	}()
 
 	errCh := make(chan error, 1)
+	defer close(errCh)
+	idCh := make(chan int64, 1)
+	defer close(idCh)
 
 	go func() {
-		const queryTransaction = `INSERT INTO transactions ("senderId", "receiverId", "amountCents", description) VALUES (@senderId, @receiverId, @amountCents, @description)`
-		_, err := tx.ExecContext(ctx, queryTransaction, pgx.NamedArgs{
+		const queryTransaction = `INSERT INTO transactions ("senderId", "receiverId", "amountCents", description) VALUES (@senderId, @receiverId, @amountCents, @description) RETURNING id`
+		var id int64
+		err := tx.QueryRow(queryTransaction, pgx.NamedArgs{
 			"senderId":    senderId,
 			"receiverId":  receiverId,
 			"amountCents": amountCents,
 			"description": description,
-		})
+		}).Scan(&id)
+		idCh <- id
 		errCh <- err
 	}()
 
@@ -212,17 +217,18 @@ func (s *Service) CreateTransaction(ctx context.Context, senderId, receiverId, a
 		errCh <- err
 	}()
 
+	id := <-idCh
 	for i := 0; i < 2; i++ {
-		if err := <-errCh; err != nil {
-			return s.wrapQueryError(err)
+		if err = <-errCh; err != nil {
+			return 0, s.wrapQueryError(err)
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		return s.wrapQueryError(err)
+		return 0, s.wrapQueryError(err)
 	}
 
-	return err
+	return id, err
 }
 
 func (s *Service) GetAtmDataByLogin(ctx context.Context, login string) (web.AtmData, error) {
@@ -317,9 +323,22 @@ func (s *Service) ConfirmTransaction(ctx context.Context, confirmationTime time.
 		if err = s.applyTransaction(ctx, transaction); err != nil {
 			return err
 		}
-
 	}
 	return nil
+}
+
+func (s *Service) ConfirmTransactionById(ctx context.Context, transactionId int64) error {
+	const queryTransactions = `
+SELECT "id", "senderId", "receiverId", "amountCents" 
+FROM transactions 
+WHERE id = $1 AND status = 'BLOCKED'`
+
+	var tr transaction_manager.TransactionToApply
+	err := s.db.QueryRow(queryTransactions, transactionId).Scan(&tr.Id, &tr.SenderId, &tr.ReceiverId, &tr.AmountCents)
+	if err != nil {
+		return s.wrapQueryError(err)
+	}
+	return s.applyTransaction(ctx, tr)
 }
 
 func (s *Service) applyTransaction(ctx context.Context, transaction transaction_manager.TransactionToApply) error {
