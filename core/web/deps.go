@@ -1,24 +1,28 @@
 package web
 
-import "context"
+import (
+	"context"
+	"x-bank-ms-bank/entity"
+)
 
 type (
 	AccountStorage interface {
-		GetUserAccounts(ctx context.Context, userId int64) ([]UserAccountData, error)
+		GetUserAccounts(ctx context.Context, userId int64) ([]entity.UserAccountData, error)
 		OpenUserAccount(ctx context.Context, userId int64) error
 		BlockUserAccount(ctx context.Context, accountId int64) error
-		GetAccountHistory(ctx context.Context, accountId, limit, offset int64) ([]AccountTransactionsData, int64, error)
+		GetAccountHistory(ctx context.Context, accountId, limit, offset int64) ([]entity.AccountTransactionsData, int64, error)
 		UpdateAtmAccount(ctx context.Context, amountCents, accountId int64) error
-		GetAccountDataById(ctx context.Context, senderId int64) (UserAccountData, error)
+		GetAccountDataById(ctx context.Context, senderId int64) (entity.UserAccountData, error)
 	}
 
 	TransactionStorage interface {
 		CreateTransaction(ctx context.Context, senderId, receiverId, amountCents int64, description string) (int64, error)
 		ConfirmTransactionById(ctx context.Context, transactionId int64) error
+		ChangeStatusById(ctx context.Context, transactionId int64, status string) error
 	}
 
 	AtmStorage interface {
-		GetAtmDataByLogin(ctx context.Context, login string) (AtmData, error)
+		GetAtmDataByLogin(ctx context.Context, login string) (entity.AtmData, error)
 		UpdateAtmCash(ctx context.Context, amountCents, atmId int64) error
 		LogCashOperation(ctx context.Context, atmId, amountCents, userId int64) error
 	}

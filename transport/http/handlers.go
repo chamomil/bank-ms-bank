@@ -12,7 +12,6 @@ const (
 	maxLimit      = 100
 	minLimit      = 0
 	defaultLimit  = 20
-	minOffset     = 0
 	defaultOffset = 0
 )
 
@@ -158,6 +157,21 @@ func (t *Transport) handlerAccountTransaction(w http.ResponseWriter, r *http.Req
 	userId := claims.Sub
 
 	if _, err := t.service.MakeTransaction(r.Context(), transactionData.SenderId, transactionData.ReceiverId, transactionData.AmountCents, userId, transactionData.Description); err != nil {
+		t.errorHandler.setError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (t *Transport) handlerChangeTransactionStatus(w http.ResponseWriter, r *http.Request) {
+	transactionId, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		t.errorHandler.setBadRequestError(w, err)
+	}
+	status := r.URL.Query().Get("status")
+
+	if err = t.service.ChangeStatus(r.Context(), transactionId, status); err != nil {
 		t.errorHandler.setError(w, err)
 		return
 	}

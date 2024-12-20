@@ -16,4 +16,5 @@ const (
 	WrongPassword
 	AccessDenied
 	AccountDoesntExist
+	InvalidStatus
 )

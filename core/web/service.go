@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"x-bank-ms-bank/cerrors"
+	"x-bank-ms-bank/entity"
 	"x-bank-ms-bank/ercodes"
 )
 
@@ -24,7 +25,9 @@ func NewService(accountStorage AccountStorage, passwordHasher PasswordHasher, at
 	}
 }
 
-func (s *Service) GetAccounts(ctx context.Context, userId int64) ([]UserAccountData, error) {
+var transactionStatus = [3]string{"BLOCKED", "CONFIRMED", "CANCELLED"}
+
+func (s *Service) GetAccounts(ctx context.Context, userId int64) ([]entity.UserAccountData, error) {
 	return s.accountStorage.GetUserAccounts(ctx, userId)
 }
 
@@ -43,13 +46,13 @@ func (s *Service) BlockAccount(ctx context.Context, accountId, userId int64) err
 	return s.accountStorage.BlockUserAccount(ctx, accountId)
 }
 
-func (s *Service) GetAccountHistory(ctx context.Context, accountId, userId, limit, offset int64) ([]AccountTransactionsData, int64, error) {
+func (s *Service) GetAccountHistory(ctx context.Context, accountId, userId, limit, offset int64) ([]entity.AccountTransactionsData, int64, error) {
 	accountInfo, err := s.accountStorage.GetAccountDataById(ctx, accountId)
 	if err != nil {
-		return []AccountTransactionsData{}, 0, err
+		return []entity.AccountTransactionsData{}, 0, err
 	}
 	if accountInfo.UserId != userId {
-		return []AccountTransactionsData{}, 0, cerrors.NewErrorWithUserMessage(ercodes.AccessDenied, nil, "Ошибка доступа")
+		return []entity.AccountTransactionsData{}, 0, cerrors.NewErrorWithUserMessage(ercodes.AccessDenied, nil, "Ошибка доступа")
 	}
 
 	return s.accountStorage.GetAccountHistory(ctx, accountId, limit, offset)
@@ -138,4 +141,20 @@ func (s *Service) changeATMState(ctx context.Context, login, password string, am
 		return 0, err
 	}
 	return atmData.AccountId, nil
+}
+
+func (s *Service) ChangeStatus(ctx context.Context, transactionId int64, status string) error {
+	if !s.isStatusValid(status) {
+		return cerrors.NewErrorWithUserMessage(ercodes.InvalidStatus, nil, "Неверный статус транзакции")
+	}
+	return s.transactionStorage.ChangeStatusById(ctx, transactionId, status)
+}
+
+func (s *Service) isStatusValid(status string) bool {
+	for i := range transactionStatus {
+		if status == transactionStatus[i] {
+			return true
+		}
+	}
+	return false
 }

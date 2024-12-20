@@ -9,8 +9,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"time"
 	"x-bank-ms-bank/cerrors"
-	transaction_manager "x-bank-ms-bank/core/transaction-manager"
-	"x-bank-ms-bank/core/web"
+	"x-bank-ms-bank/entity"
 	"x-bank-ms-bank/ercodes"
 )
 
@@ -37,7 +36,7 @@ func NewService(login, password, host string, port int, database string, maxCons
 	}, err
 }
 
-func (s *Service) GetUserAccounts(ctx context.Context, userId int64) ([]web.UserAccountData, error) {
+func (s *Service) GetUserAccounts(ctx context.Context, userId int64) ([]entity.UserAccountData, error) {
 	const query = `
 SELECT accounts."id", "balanceCents", "status" 
 FROM accounts 
@@ -54,9 +53,9 @@ WHERE "userId" = $1
 		return nil, s.wrapQueryError(err)
 	}
 
-	var userAccountsData []web.UserAccountData
+	var userAccountsData []entity.UserAccountData
 	for rows.Next() {
-		var data web.UserAccountData
+		var data entity.UserAccountData
 		if err = rows.Scan(&data.Id, &data.BalanceCents, &data.Status); err != nil {
 			return nil, s.wrapScanError(err)
 		}
@@ -119,7 +118,7 @@ func (s *Service) BlockUserAccount(ctx context.Context, accountId int64) error {
 	return nil
 }
 
-func (s *Service) GetAccountHistory(ctx context.Context, accountId, limit, offset int64) ([]web.AccountTransactionsData, int64, error) {
+func (s *Service) GetAccountHistory(ctx context.Context, accountId, limit, offset int64) ([]entity.AccountTransactionsData, int64, error) {
 	const query = `SELECT "senderId", "receiverId", "status", "createdAt", "amountCents", "description" FROM transactions 
 					WHERE "senderId" = @accountId OR "receiverId" = @accountId ORDER BY "createdAt" DESC LIMIT @limit OFFSET @offset`
 
@@ -132,9 +131,9 @@ func (s *Service) GetAccountHistory(ctx context.Context, accountId, limit, offse
 		return nil, 0, s.wrapQueryError(err)
 	}
 
-	var accountTransactionsData []web.AccountTransactionsData
+	var accountTransactionsData []entity.AccountTransactionsData
 	for rows.Next() {
-		var data web.AccountTransactionsData
+		var data entity.AccountTransactionsData
 		if err = rows.Scan(&data.SenderId, &data.ReceiverId, &data.Status, &data.CreatedAt, &data.AmountCents, &data.Description); err != nil {
 			return nil, 0, s.wrapScanError(err)
 		}
@@ -159,21 +158,21 @@ func (s *Service) GetAccountHistory(ctx context.Context, accountId, limit, offse
 	return accountTransactionsData, total, nil
 }
 
-func (s *Service) GetAccountDataById(ctx context.Context, senderId int64) (web.UserAccountData, error) {
+func (s *Service) GetAccountDataById(ctx context.Context, senderId int64) (entity.UserAccountData, error) {
 	const accountQuery = `SELECT accounts."balanceCents", accounts."status", COALESCE("accountOwners"."userId", 0) FROM accounts 
     LEFT JOIN "accountOwners" ON accounts."ownerId" = "accountOwners".id WHERE accounts."id" = $1`
 	row := s.db.QueryRowContext(ctx, accountQuery, senderId)
 	if err := row.Err(); err != nil {
-		return web.UserAccountData{}, s.wrapQueryError(err)
+		return entity.UserAccountData{}, s.wrapQueryError(err)
 	}
 
-	var userAccountData web.UserAccountData
+	var userAccountData entity.UserAccountData
 	if err := row.Scan(&userAccountData.BalanceCents, &userAccountData.Status, &userAccountData.UserId); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return web.UserAccountData{}, cerrors.NewErrorWithUserMessage(ercodes.AccountDoesntExist, err,
+			return entity.UserAccountData{}, cerrors.NewErrorWithUserMessage(ercodes.AccountDoesntExist, err,
 				"Счёта, указанного в транзакции, не существует")
 		}
-		return web.UserAccountData{}, s.wrapScanError(err)
+		return entity.UserAccountData{}, s.wrapScanError(err)
 	}
 	return userAccountData, nil
 }
@@ -231,7 +230,7 @@ func (s *Service) CreateTransaction(ctx context.Context, senderId, receiverId, a
 	return id, err
 }
 
-func (s *Service) GetAtmDataByLogin(ctx context.Context, login string) (web.AtmData, error) {
+func (s *Service) GetAtmDataByLogin(ctx context.Context, login string) (entity.AtmData, error) {
 	const query = `SELECT atms.id, atms.password, atms."cashCents", accounts.id as "hasPersonalData"
 				   FROM atms
 				   INNER JOIN "accountOwners" ON atms.id = "accountOwners"."atmId" 
@@ -244,12 +243,12 @@ func (s *Service) GetAtmDataByLogin(ctx context.Context, login string) (web.AtmD
 		},
 	)
 	if err := row.Err(); err != nil {
-		return web.AtmData{}, s.wrapQueryError(err)
+		return entity.AtmData{}, s.wrapQueryError(err)
 	}
 
-	var atmData web.AtmData
+	var atmData entity.AtmData
 	if err := row.Scan(&atmData.Id, &atmData.PasswordHash, &atmData.CashCents, &atmData.AccountId); err != nil {
-		return web.AtmData{}, s.wrapScanError(err)
+		return entity.AtmData{}, s.wrapScanError(err)
 	}
 	return atmData, nil
 }
@@ -310,9 +309,9 @@ func (s *Service) ConfirmTransaction(ctx context.Context, confirmationTime time.
 		return s.wrapQueryError(err)
 	}
 
-	var transactionsToApply []transaction_manager.TransactionToApply
+	var transactionsToApply []entity.TransactionToApply
 	for rows.Next() {
-		var data transaction_manager.TransactionToApply
+		var data entity.TransactionToApply
 		if err = rows.Scan(&data.Id, &data.SenderId, &data.ReceiverId, &data.AmountCents); err != nil {
 			return s.wrapScanError(err)
 		}
@@ -333,7 +332,7 @@ SELECT "id", "senderId", "receiverId", "amountCents"
 FROM transactions 
 WHERE id = $1 AND status = 'BLOCKED'`
 
-	var tr transaction_manager.TransactionToApply
+	var tr entity.TransactionToApply
 	err := s.db.QueryRow(queryTransactions, transactionId).Scan(&tr.Id, &tr.SenderId, &tr.ReceiverId, &tr.AmountCents)
 	if err != nil {
 		return s.wrapQueryError(err)
@@ -341,7 +340,7 @@ WHERE id = $1 AND status = 'BLOCKED'`
 	return s.applyTransaction(ctx, tr)
 }
 
-func (s *Service) applyTransaction(ctx context.Context, transaction transaction_manager.TransactionToApply) error {
+func (s *Service) applyTransaction(ctx context.Context, transaction entity.TransactionToApply) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return s.wrapQueryError(err)
@@ -372,4 +371,10 @@ func (s *Service) applyTransaction(ctx context.Context, transaction transaction_
 		return s.wrapQueryError(err)
 	}
 	return nil
+}
+
+func (s *Service) ChangeStatusById(ctx context.Context, transactionId int64, status string) error {
+	const query = `UPDATE transactions SET status = $1 WHERE id = $2`
+	_, err := s.db.ExecContext(ctx, query, status, transactionId)
+	return err
 }
