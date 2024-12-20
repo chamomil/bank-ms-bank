@@ -8,7 +8,7 @@ type (
 	}
 
 	UserAccountsResponse struct {
-		Items []UserAccountsResponseItem `json:"items"`
+		Accounts []UserAccountsResponseItem `json:"accounts"`
 	}
 
 	AccountsHistoryResponseItem struct {

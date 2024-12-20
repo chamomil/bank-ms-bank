@@ -41,14 +41,14 @@ func (t *Transport) handlerUserAccounts(w http.ResponseWriter, r *http.Request) 
 				BalanceCents: entry.BalanceCents,
 				Status:       entry.Status,
 			}
-			response.Items = append(response.Items, userAccountsItem)
+			response.Accounts = append(response.Accounts, userAccountsItem)
 		}
 	} else {
-		response.Items = nil
+		response.Accounts = nil
 	}
 
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(data)
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(&response)
 	if err != nil {
 		t.errorHandler.setError(w, err)
 		return
@@ -133,7 +133,7 @@ func (t *Transport) handlerAccountHistory(w http.ResponseWriter, r *http.Request
 	}
 	response.Total = total
 
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		t.errorHandler.setError(w, err)
@@ -186,6 +186,7 @@ func (t *Transport) handlerATMSupplement(w http.ResponseWriter, r *http.Request)
 
 	if err := t.service.ATMSupplement(r.Context(), basic.Login, basic.Password, atmSupplementData.AmountCents); err != nil {
 		t.errorHandler.setError(w, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

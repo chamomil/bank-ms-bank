@@ -28,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	jwtHs512, err := jwt.NewHS512(conf.Hs512SecretKey)
+	jwtRs256, err := jwt.NewRS256(conf.Rs256PrivateKey, conf.Rs256PublicKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func main() {
 	passwordHasher := hasher.NewService()
 
 	service := web.NewService(&postgresService, &passwordHasher, &postgresService, &postgresService)
-	transport := http.NewTransport(service, &jwtHs512)
+	transport := http.NewTransport(service, &jwtRs256)
 
 	errCh := transport.Start(*addr)
 	interruptsCh := make(chan os.Signal, 1)

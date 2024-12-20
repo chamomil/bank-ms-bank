@@ -15,4 +15,5 @@ const (
 	NotEnoughMoney
 	WrongPassword
 	AccessDenied
+	AccountDoesntExist
 )
